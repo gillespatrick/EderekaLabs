@@ -1,28 +1,28 @@
 - name: copy Tomcat tar file
   copy:
-    src: apache-tomcat-{{ tomcat_version }}.tar.gz
+    src: apache-tomcat-8.5.53.tar.gz
     dest: /tmp
 
 - name: Extract archive
   unarchive:
-    src: /tmp/apache-tomcat-{{ tomcat_version }}.tar.gz
+    src: /tmp/apache-tomcat-8.5.53.tar.gz
     dest: /opt
     remote_src: yes
 
 - name: create Symlink
   file:
-    src: /opt/apache-tomcat-{{ tomcat_version }}
+    src: /opt/apache-tomcat-8.5.53
     path: /opt/tomcat
-    owner: tomcat
-    group: tomcat
+    owner: root
+    group: root
     state: link
 
 - name: Change ownership of Tomcat installation
   file:
     path: /opt/tomcat/
-    owner: tomcat
-    group: tomcat
-    mode: 0755
+    owner: root
+    group: root
+    mode: 0777
     state: directory
     recurse: yes
 
@@ -32,27 +32,38 @@
     state: touch
 
 - name: create tomcat service
+
   blockinfile:
     path: /etc/systemd/system/tomcat.service
     block: |
       [Unit]
-      Description=Tomcat - instance %i
-      After=syslog.target network.target
+      Description=Tomcat
+      After= network.target
       [Service]
       Type=forking
-      User=tomcat
-      Group=tomcat
+      User=root
+      Group=root
       Environment="CATALINA_HOME=/opt/tomcat/"
+      Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
+      Environment="CATALINA_BASE=/opt/tomcat"
+      Environment="JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64"
       ExecStart=/opt/tomcat/bin/startup.sh
       ExecStop=/opt/tomcat/bin/shutdown.sh
+      ExecReload=/bin/kill $MAINPID
+      RemainAfterExit=yes
       [Install]
       WantedBy=multi-user.target
 
-- name: enable & start tomcat service
+- name: Reload the SystemD to re-read configurations
+  become: yes
   systemd:
-    name: tomcat
-    state: started
-    enabled: yes
+     daemon-reload: yes
+
+#- name: enable & start tomcat service
+ # systemd:
+  #  name: tomcat
+   # state: started
+    #enabled: yes
 
 - name: create app dir
   file:
